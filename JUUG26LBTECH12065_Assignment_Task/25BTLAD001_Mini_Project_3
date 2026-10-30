@@ -1,0 +1,126 @@
+# MINI PROJECT 3 - ATTENDANCE TRACKER
+# Data structure: dictionary
+# {student_name: list of "P" / "A" attendance records}
+ 
+attendance = {}
+ 
+def add_student(name):
+    if name in attendance:
+        return "Student already exists."
+    attendance[name] = []
+    return "Student added."
+ 
+def mark(name, status):
+    """Add one day's attendance. Status must be P or A."""
+    status = status.upper()
+    if name not in attendance:
+        return "Student not found."
+    if status not in ("P", "A"):
+        return "Status must be P or A."
+    attendance[name].append(status)
+    return "Attendance recorded."
+ 
+def update(name, day, status):
+    """Correct an existing record. Day number starts from 1."""
+    status = status.upper()
+    if name not in attendance:
+        return "Student not found."
+    if status not in ("P", "A"):
+        return "Status must be P or A."
+    if not 1 <= day <= len(attendance[name]):
+        return "Invalid day number."
+    attendance[name][day - 1] = status
+    return "Attendance updated."
+ 
+def percentage(name):
+    records = attendance[name]
+    if not records:
+        return 0.0
+    return records.count("P") / len(records) * 100
+ 
+def below_threshold(threshold=75):
+    return [(name, percentage(name))
+            for name in attendance
+            if percentage(name) < threshold]
+ 
+def display():
+    if not attendance:
+        print("No students.")
+        return
+ 
+    print(f"{'Student':<22}{'Records':<15}{'Present':<10}"
+          f"{'Total':<8}{'Percentage'}")
+    print("-" * 70)
+    for name, records in attendance.items():
+        record_text = " ".join(records)
+        print(f"{name:<22}{record_text:<15}{records.count('P'):<10}"
+              f"{len(records):<8}{percentage(name):.1f}%")
+ 
+def run_tests():
+    attendance.clear()
+ 
+    add_student("Asha")
+    add_student("Ravi")
+    add_student("Meena")
+ 
+    for status in "PPPP":
+        mark("Asha", status)
+    for status in "PAPA":
+        mark("Ravi", status)
+    for status in "PPPA":
+        mark("Meena", status)
+ 
+    assert percentage("Asha") == 100
+    assert percentage("Ravi") == 50
+    assert percentage("Meena") == 75
+    assert [name for name, _ in below_threshold(75)] == ["Ravi"]
+    assert sorted(name for name, _ in below_threshold(80)) == ["Meena", "Ravi"]
+ 
+    update("Ravi", 2, "P")
+    update("Ravi", 4, "P")
+    assert percentage("Ravi") == 100
+ 
+    assert add_student("Asha") == "Student already exists."
+    assert mark("Ghost", "P") == "Student not found."
+    assert mark("Asha", "X") == "Status must be P or A."
+    assert update("Asha", 9, "A") == "Invalid day number."
+ 
+    add_student("New")
+    assert percentage("New") == 0.0
+    print("All attendance tests passed.\\n")
+ 
+def menu():
+    while True:
+        print("\\n1. Add student  2. Mark attendance  3. Update record")
+        print("4. Display      5. Below threshold  6. Exit")
+        choice = input("Choice: ").strip()
+ 
+        if choice == "1":
+            print(add_student(input("Name: ").strip()))
+        elif choice == "2":
+            name = input("Name: ").strip()
+            status = input("Status (P/A): ").strip()
+            print(mark(name, status))
+        elif choice == "3":
+            name = input("Name: ").strip()
+            day = int(input("Day no.: "))
+            status = input("New status (P/A): ").strip()
+            print(update(name, day, status))
+        elif choice == "4":
+            display()
+        elif choice == "5":
+            threshold = float(input("Threshold %: "))
+            low = below_threshold(threshold)
+            if low:
+                for name, value in low:
+                    print(f"{name}: {value:.1f}% (shortage)")
+            else:
+                print("Everyone meets the threshold.")
+        elif choice == "6":
+            break
+        else:
+            print("Invalid choice.")
+ 
+if __name__ == "__main__":
+    run_tests()
+    menu()
