@@ -1,0 +1,222 @@
+Program 8: Contact Book
+"""Lab Exercise 8: Contact Book using lists and dictionaries.
+Data structure: a list of dictionaries, one dictionary per contact.
+Scenario (RWE): organisational contact management for a college department.
+"""
+ 
+contacts = []  # list of {"name":..., "phone":..., "email":..., "dept":...}
+ 
+def find(name):
+    """Return the contact dict matching name (case-insensitive) or None."""
+    for c in contacts:
+        if c["name"].lower() == name.lower():
+            return c
+    return None
+ 
+def add(name, phone, email, dept=""):
+    if find(name):
+        return "Contact already exists."
+    if not (phone.isdigit() and len(phone) == 10):
+        return "Invalid phone number (need 10 digits)."
+    contacts.append({"name": name, "phone": phone,
+                     "email": email, "dept": dept})
+    return "Contact added."
+ 
+def search(keyword):
+    return [c for c in contacts if keyword.lower() in c["name"].lower()]
+ 
+def update(name, **fields):
+    c = find(name)
+    if not c:
+        return "Contact not found."
+    c.update({k: v for k, v in fields.items() if k in c and v})
+    return "Contact updated."
+ 
+def delete(name):
+    c = find(name)
+    if not c:
+        return "Contact not found."
+    contacts.remove(c)
+    return "Contact deleted."
+ 
+def display():
+    if not contacts:
+        print("No contacts saved.")
+        return
+    print(f"{'Name':<20}{'Phone':<13}{'Email':<25}{'Dept'}")
+    print("-" * 70)
+    for c in sorted(contacts, key=lambda x: x["name"].lower()):
+        print(f"{c['name']:<20}{c['phone']:<13}"
+              f"{c['email']:<25}{c['dept']}")
+ 
+def run_tests():
+    """Critical thinking: verify each operation, including edge cases."""
+    contacts.clear()
+    assert add("Asha", "9876543210", "asha@college.edu", "AIDE") == \
+        "Contact added."
+    assert add("asha", "9999999999", "x@y.com") == "Contact already exists."
+    assert add("Ravi", "12345", "r@x.com") == \
+        "Invalid phone number (need 10 digits)."
+    assert len(search("as")) == 1
+    assert update("Asha", phone="9123456780") == "Contact updated."
+    assert find("Asha")["phone"] == "9123456780"
+    assert delete("Ravi") == "Contact not found."
+    assert delete("Asha") == "Contact deleted."
+    assert contacts == []
+    print("All contact book tests passed.\n")
+ 
+def menu():
+    while True:
+        print("\n1.Add 2.Search 3.Update 4.Delete 5.Display 6.Exit")
+        ch = input("Choice: ").strip()
+        if ch == "1":
+            print(add(input("Name: "), input("Phone: "),
+                      input("Email: "), input("Dept: ")))
+        elif ch == "2":
+            for c in search(input("Search name: ")) or ["No match found."]:
+                print(c)
+        elif ch == "3":
+            n = input("Name to update: ")
+            print(update(n,
+                         phone=input("New phone (blank=skip): "),
+                         email=input("New email (blank=skip): "),
+                         dept=input("New dept (blank=skip): ")))
+        elif ch == "4":
+            print(delete(input("Name to delete: ")))
+        elif ch == "5":
+            display()
+        elif ch == "6":
+            break
+        else:
+            print("Invalid choice.")
+ 
+if __name__ == "__main__":
+    run_tests()
+    menu()
+
+
+
+
+ Program 9: Student Grading System
+ 
+"""Lab Exercise 9: Student Grading System.
+Dictionary: {student_name: marks}. Grades via conditional statements.
+Scenario (RWE): a class result sheet interpreted by the teacher.
+"""
+ 
+def get_grade(marks):
+    if not 0 <= marks <= 100:
+        return "Invalid"
+    if marks >= 90:
+        return "O"
+    elif marks >= 80:
+        return "A+"
+    elif marks >= 70:
+        return "A"
+    elif marks >= 60:
+        return "B"
+    elif marks >= 50:
+        return "C"
+    elif marks >= 40:
+        return "D"
+    return "F"
+ 
+def test_boundaries():
+    """Critical thinking: check every grade boundary and invalid input."""
+    cases = {100: "O", 90: "O", 89: "A+", 80: "A+", 79: "A", 70: "A",
+             69: "B", 60: "B", 59: "C", 50: "C", 49: "D", 40: "D",
+             39: "F", 0: "F", 101: "Invalid", -5: "Invalid"}
+    for m, expected in cases.items():
+        assert get_grade(m) == expected, f"Failed at {m}"
+    print("All boundary tests passed.\n")
+ 
+def main():
+    test_boundaries()
+    students = {}
+    n = int(input("Number of students: "))
+    for _ in range(n):
+        name = input("Name: ")
+        students[name] = float(input(f"Marks for {name} (0-100): "))
+ 
+    print(f"\n{'Student':<20}{'Marks':<8}{'Grade':<6}{'Result'}")
+    print("-" * 45)
+    for name, m in students.items():
+        g = get_grade(m)
+        result = "Pass" if g not in ("F", "Invalid") else "Fail"
+        print(f"{name:<20}{m:<8}{g:<6}{result}")
+ 
+    valid = {k: v for k, v in students.items() if get_grade(v) != "Invalid"}
+    if valid:
+        top = max(valid, key=valid.get)
+        low = min(valid, key=valid.get)
+        avg = sum(valid.values()) / len(valid)
+        passed = sum(1 for v in valid.values() if v >= 40)
+        print(f"\nClass average : {avg:.2f}")
+        print(f"Topper        : {top} ({valid[top]})")
+        print(f"Lowest        : {low} ({valid[low]})")
+        print(f"Pass %        : {passed / len(valid) * 100:.1f}%")
+ 
+if __name__ == "__main__":
+    main()
+
+    
+
+
+Program 10: Frequency Counter
+
+"""Lab Exercise 10: Frequency Counter using dictionaries.
+Scenario (RWE): classroom feedback / survey responses.
+"""
+import string
+ 
+def word_frequency(sentence):
+    freq = {}
+    for word in sentence.lower().split():
+        word = word.strip(string.punctuation)
+        if word:
+            freq[word] = freq.get(word, 0) + 1
+    return freq
+ 
+def element_frequency(items):
+    freq = {}
+    for x in items:
+        freq[x] = freq.get(x, 0) + 1
+    return freq
+ 
+def test():
+    """Critical thinking: verify against known answers and edge cases."""
+    assert word_frequency("the cat and The dog") == \
+        {"the": 2, "cat": 1, "and": 1, "dog": 1}
+    assert word_frequency("Hello, hello!") == {"hello": 2}
+    assert word_frequency("") == {}
+    assert element_frequency([1, 2, 2, 3, 3, 3]) == {1: 1, 2: 2, 3: 3}
+    # cross-check with the standard library
+    from collections import Counter
+    s = "to be or not to be"
+    assert word_frequency(s) == dict(Counter(s.split()))
+    print("All frequency tests passed.\n")
+ 
+def show(freq):
+    for k, v in sorted(freq.items(), key=lambda kv: kv[1],
+                       reverse=True):
+        print(f"{k:<15}{v:<4}{'*' * v}")
+ 
+def main():
+    test()
+    print("1. Word frequency in a sentence\n"
+          "2. Survey responses (list of choices)")
+    if input("Choice: ").strip() == "1":
+        freq = word_frequency(input("Enter sentence: "))
+    else:
+        raw = input("Enter responses separated by commas: ")
+        freq = element_frequency(raw.lower().replace(" ", "").split(","))
+    print()
+    show(freq)
+    if freq:
+        top = max(freq, key=freq.get)
+        total = sum(freq.values())
+        pct = freq[top] / total * 100
+        print(f"\nMost frequent: '{top}' ({freq[top]} of {total} = {pct:.1f}%)")
+ 
+if __name__ == "__main__":
+    main()
