@@ -1,0 +1,361 @@
+"""Lab Exercise 11: Log File Reader.
+Counts ERROR / WARNING / INFO occurrences in a log file.
+Scenario (RWE): monitoring a web application's log for problems.
+"""
+
+import os
+ 
+LEVELS = ("ERROR", "WARNING", "INFO")
+ 
+SAMPLE_LOG = """2026-10-28 09:00:01 INFO Server started
+2026-10-28 09:05:12 WARNING Disk usage at 85%
+2026-10-28 09:10:45 ERROR Database connection failed
+2026-10-28 09:11:02 INFO Retrying connection
+2026-10-28 09:11:30 ERROR Database connection failed
+2026-10-28 09:15:00 INFO User login: A.Lakshmi prasad
+"""
+ 
+ 
+def analyze_log(path):
+    """Return (counts dict, list of error lines). Raises/returns messages for bad files."""
+    if not os.path.exists(path):
+        return None, "File not found."
+    if os.path.getsize(path) == 0:
+        return None, "File is empty."
+    counts = {lvl: 0 for lvl in LEVELS}
+    errors = []
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                words = line.upper().split()      # whole-word match, not substring
+                for lvl in LEVELS:
+                    if lvl in words:
+                        counts[lvl] += 1
+                        if lvl == "ERROR":
+                            errors.append(line.strip())
+                        break                      # one category per line
+    except PermissionError:
+        return None, "Permission denied."
+    return counts, errors
+ 
+ 
+def report(path):
+    counts, extra = analyze_log(path)
+    if counts is None:
+        print(f"Cannot analyze '{path}': {extra}")
+        return
+    print(f"\nLog summary for {path}")
+    for lvl in LEVELS:
+        print(f"  {lvl:<8}: {counts[lvl]}")
+    print(f"  Total lines categorised: {sum(counts.values())}")
+    if extra:
+        print("\nError lines:")
+        for e in extra:
+            print("  ", e)
+    if counts["ERROR"] > 0:
+        print("\nAction needed: errors found - investigate the lines above.")
+ 
+ 
+def run_tests():
+    with open("test_log.txt", "w") as f:
+        f.write(SAMPLE_LOG)
+    c, e = analyze_log("test_log.txt")
+    assert c == {"ERROR": 2, "WARNING": 1, "INFO": 3} and len(e) == 2
+    open("empty_log.txt", "w").close()
+    assert analyze_log("empty_log.txt") == (None, "File is empty.")
+    assert analyze_log("no_such.txt") == (None, "File not found.")
+    with open("mixed_log.txt", "w") as f:
+        f.write("error in lowercase\nNo keyword here\nERRORS plural should not count\n")
+    c, _ = analyze_log("mixed_log.txt")
+    assert c == {"ERROR": 1, "WARNING": 0, "INFO": 0}
+    for fn in ("test_log.txt", "empty_log.txt", "mixed_log.txt"):
+        os.remove(fn)
+    print("All log reader tests passed.\n")
+ 
+ 
+if __name__ == "__main__":
+    run_tests()
+    p = input("Enter log file path (blank = create sample.log): ").strip()
+    if not p:
+        p = "sample.log"
+        with open(p, "w") as f:
+            f.write(SAMPLE_LOG)
+    report(p)
+
+
+
+
+
+"""Lab Exercise 12:
+Student Data Manager using files.
+Records stored in students.txt, one per line: roll,name,department,marks
+Scenario (RWE): college student-record management.
+"""
+import os
+ 
+FILE = "students.txt"
+ 
+ 
+def validate(roll, name, dept, marks):
+    if not roll.isalnum():
+        return "Roll number must be alphanumeric."
+    if not name.replace(' ', '').replace('.', '').isalpha():
+        return "Name must contain only letters."
+    if not dept.strip():
+        return "Department cannot be empty."
+    try:
+        if not 0 <= float(marks) <= 100:
+            return "Marks must be between 0 and 100."
+    except ValueError:
+        return "Marks must be a number."
+    return None
+ 
+ 
+def load():
+    if not os.path.exists(FILE):
+        return []
+    with open(FILE) as f:
+        return [line.strip().split(",") for line in f if line.strip()]
+ 
+ 
+def save(records):
+    with open(FILE, "w") as f:
+        for r in records:
+            f.write(",".join(r) + "\n")
+ 
+ 
+def add(roll, name, dept, marks):
+    err = validate(roll, name, dept, marks)
+    if err:
+        return err
+    records = load()
+    if any(r[0].lower() == roll.lower() for r in records):
+        return "Roll number already exists."
+    with open(FILE, "a") as f:            # append mode: no need to rewrite file
+        f.write(f"{roll},{name},{dept},{marks}\n")
+    return "Record added."
+ 
+ 
+def search(keyword):
+    return [r for r in load() if keyword.lower() in r[0].lower() or keyword.lower() in r[1].lower()]
+ 
+ 
+def update(roll, name, dept, marks):
+    err = validate(roll, name, dept, marks)
+    if err:
+        return err
+    records = load()
+    for r in records:
+        if r[0].lower() == roll.lower():
+            r[1:] = [name, dept, marks]
+            save(records)
+            return "Record updated."
+    return "Roll number not found."
+ 
+ 
+def delete(roll):
+    records = load()
+    new = [r for r in records if r[0].lower() != roll.lower()]
+    if len(new) == len(records):
+        return "Roll number not found."
+    save(new)
+    return "Record deleted."
+ 
+ 
+def display():
+    records = load()
+    if not records:
+        print("No records.")
+        return
+    print(f"{'Roll':<10}{'Name':<15}{'Dept':<10}{'Marks'}")
+    print("-" * 42)
+    for r in records:
+        print(f"{r[0]:<10}{r[1]:<15}{r[2]:<10}{r[3]}")
+ 
+ 
+def run_tests():
+    global FILE
+    FILE = "test_students.txt"
+    if os.path.exists(FILE):
+        os.remove(FILE)
+    assert load() == []                                   # missing file handled
+    assert add("25BTLAd001", "A.Lakshmi prasad", "AIDE", "88") == "Record added."
+    assert add("25btlAd001", "Dup", "AIDE", "50") == "Roll number already exists."
+    assert add("25A02", "Ravi", "AIDE", "105") == "Marks must be between 0 and 100."
+    assert add("25A02", "R4vi", "AIDE", "70") == "Name must contain only letters."
+    assert add("25A02", "Ravi", "CSE", "abc") == "Marks must be a number."
+    assert add("25A02", "Ravi", "CSE", "72") == "Record added."
+    assert len(search("rav")) == 1
+    assert update("25A02", "Ravi", "CSE", "80") == "Record updated."
+    assert search("25A02")[0][3] == "80"
+    assert update("99", "X", "Y", "1") == "Roll number not found."
+    assert delete("25A01") == "Record deleted."
+    assert len(load()) == 1
+    os.remove(FILE)
+    FILE = "students.txt"
+    print("All student manager tests passed.\n")
+ 
+ 
+def menu():
+    while True:
+        print("\n1.Add 2.Search 3.Update 4.Delete 5.Display 6.Exit")
+        ch = input("Choice: ").strip()
+        if ch == "1":
+            print(add(input("Roll: "), input("Name: "), input("Dept: "), input("Marks: ")))
+        elif ch == "2":
+            for r in search(input("Search roll/name: ")) or ["No match found."]:
+                print(r)
+        elif ch == "3":
+            print(update(input("Roll: "), input("Name: "), input("Dept: "), input("Marks: ")))
+        elif ch == "4":
+            print(delete(input("Roll: ")))
+        elif ch == "5":
+            display()
+        elif ch == "6":
+            break
+        else:
+            print("Invalid choice.")
+ 
+ 
+if __name__ == "__main__":
+    run_tests()
+    menu()
+
+
+
+
+
+"""Lab Exercise 13:
+
+CSV-based Payroll Management System.
+Input CSV columns: emp_id,name,department,basic
+Gross = Basic + HRA(20%) + DA(10%) ; Deductions = PF(12% of basic) + Professional tax
++ Income tax slab on gross. Net = Gross - Deductions.
+Scenario (RWE): monthly salary processing for a small organisation.
+(Rates are assumptions for the lab - change the constants as required.)
+"""
+import csv
+import os
+ 
+HRA_RATE, DA_RATE, PF_RATE, PROF_TAX = 0.20, 0.10, 0.12, 200
+ 
+SAMPLE = """emp_id,name,department,basic
+25BTLAd001,A.Lakshmi prasad,IT,40000
+E102,Ravi,HR,30000
+E103,Meena,Finance,55000
+E104,Kiran,IT,25000
+"""
+ 
+ 
+def tax_on(gross):
+    """Simple monthly slab: nil up to 25000, 5% on 25000-50000, 10% above."""
+    if gross <= 25000:
+        return 0.0
+    if gross <= 50000:
+        return (gross - 25000) * 0.05
+    return 25000 * 0.05 + (gross - 50000) * 0.10
+ 
+ 
+def compute(basic):
+    hra, da = basic * HRA_RATE, basic * DA_RATE
+    gross = basic + hra + da
+    pf, tax = basic * PF_RATE, tax_on(gross)
+    deductions = pf + PROF_TAX + tax
+    return {"hra": hra, "da": da, "gross": gross, "pf": pf, "tax": tax,
+            "deductions": deductions, "net": gross - deductions}
+ 
+ 
+def read_employees(path):
+    """Return (valid_rows, error_messages)."""
+    if not os.path.exists(path):
+        return [], ["File not found."]
+    rows, errors = [], []
+    with open(path, newline="") as f:
+        reader = csv.DictReader(f)
+        needed = {"emp_id", "name", "department", "basic"}
+        if not reader.fieldnames or not needed <= set(reader.fieldnames):
+            return [], ["CSV must have columns: emp_id, name, department, basic."]
+        for i, row in enumerate(reader, start=2):
+            try:
+                basic = float(row["basic"])
+                if basic <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                errors.append(f"Line {i}: invalid basic salary '{row['basic']}'.")
+                continue
+            row["basic"] = basic
+            rows.append(row)
+    return rows, errors
+ 
+ 
+def process(path, out_path="salary_summary.csv"):
+    employees, errors = read_employees(path)
+    results = []
+    for e in employees:
+        results.append({**e, **compute(e["basic"])})
+    if results:
+        with open(out_path, "w", newline="") as f:
+            cols = ["emp_id", "name", "department", "basic", "gross", "deductions", "net"]
+            w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
+            w.writeheader()
+            for r in results:
+                w.writerow({k: (round(v, 2) if isinstance(v, float) else v) for k, v in r.items()})
+    return results, errors
+ 
+ 
+def report(results, errors):
+    for er in errors:
+        print("Warning:", er)
+    if not results:
+        print("No valid employee records to process.")
+        return
+    print(f"\n{'ID':<7}{'Name':<9}{'Dept':<10}{'Basic':>9}{'Gross':>10}{'Deduct':>9}{'Net':>10}")
+    print("-" * 64)
+    for r in results:
+        print(f"{r['emp_id']:<7}{r['name']:<9}{r['department']:<10}{r['basic']:>9.0f}"
+              f"{r['gross']:>10.0f}{r['deductions']:>9.0f}{r['net']:>10.0f}")
+    print("-" * 64)
+    print(f"Total payout (net): {sum(r['net'] for r in results):.2f}")
+    print(f"Total gross       : {sum(r['gross'] for r in results):.2f}")
+    depts = {}
+    for r in results:
+        depts[r["department"]] = depts.get(r["department"], 0) + r["net"]
+    print("Department-wise net payout:")
+    for d, v in depts.items():
+        print(f"  {d:<10}{v:.2f}")
+    top = max(results, key=lambda r: r["net"])
+    print(f"Highest net salary: {top['name']} ({top['net']:.2f})")
+ 
+ 
+def run_tests():
+    # Hand-verified: basic 40000 -> HRA 8000, DA 4000, gross 52000
+    c = compute(40000)
+    assert c["gross"] == 52000 and c["pf"] == 4800
+    assert abs(c["tax"] - (1250 + 200)) < 1e-9          # 25000*5% + 2000*10%
+    assert abs(c["net"] - (52000 - 4800 - 200 - 1450)) < 1e-9   # 45550
+    assert compute(15000)["tax"] == 0                   # gross 19500, below slab
+    assert abs(compute(20000)["tax"] - 50) < 1e-9       # gross 26000 -> 1000*5%
+    assert tax_on(25000) == 0 and tax_on(50000) == 1250
+    with open("t.csv", "w") as f:
+        f.write("emp_id,name,department,basic\nE1,A,IT,40000\nE2,B,HR,abc\nE3,C,HR,-5\n")
+    rows, errs = read_employees("t.csv")
+    assert len(rows) == 1 and len(errs) == 2
+    with open("bad.csv", "w") as f:
+        f.write("id,salary\n1,100\n")
+    assert read_employees("bad.csv")[0] == []
+    assert read_employees("missing.csv") == ([], ["File not found."])
+    for fn in ("t.csv", "bad.csv"):
+        os.remove(fn)
+    print("All payroll tests passed.\n")
+ 
+ 
+if __name__ == "__main__":
+    run_tests()
+    p = input("Enter employee CSV path (blank = create employees.csv): ").strip()
+    if not p:
+        p = "employees.csv"
+        with open(p, "w") as f:
+            f.write(SAMPLE)
+    res, errs = process(p)
+    report(res, errs)
+    if res:
