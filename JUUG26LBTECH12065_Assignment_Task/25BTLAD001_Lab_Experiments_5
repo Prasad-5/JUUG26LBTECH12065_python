@@ -1,0 +1,97 @@
+#14. Bank Account System using OOP
+
+class Account:
+    def __init__(self, bal):
+        self.__bal = bal
+ 
+    def deposit(self, a):
+        if a > 0:
+            self.__bal += a
+        else:
+            print("Invalid amount")
+ 
+    def withdraw(self, a):
+        if a <= 0:
+            print("Invalid amount")
+        elif a > self.__bal:
+            print("Insufficient balance")
+        else:
+            self.__bal -= a
+ 
+    def balance(self):
+        print("Balance:", self.__bal)
+ 
+acc = Account(1000)
+acc.deposit(500)
+acc.withdraw(2000)
+acc.withdraw(-50)
+acc.withdraw(300)
+acc.balance()
+'''INPUT
+Balance = 1000; Deposit 500, Withdraw 2000, Withdraw -50, Withdraw 300
+OUTPUT
+Insufficient balance
+Invalid amount
+Balance: 1200'''
+
+
+#15. Library Management System
+
+class Item:
+    def __init__(self, title):
+        self.title = title
+        self.available = True
+ 
+class Book(Item):
+    def issue(self):
+        if self.available:
+            self.available = False
+            print("Issued")
+        else:
+            print("Not available")
+ 
+    def give_back(self):
+        self.available = True
+        print("Returned")
+ 
+b = Book("Python")
+b.issue()
+b.issue()
+b.give_back()
+print(b.title, b.available)
+
+
+'''INPUT
+Book = Python; Issue, Issue, Return
+OUTPUT
+Issued
+Not available
+Returned
+Python True'''
+
+#16. Dice Simulator using random module
+
+import random
+ 
+n = int(input("Rolls: "))
+count = [0] * 7
+for i in range(n):
+    d = random.randint(1, 6)
+    count[d] += 1
+    print(d, end=" ")
+print()
+for f in range(1, 7):
+    print(f, "->", count[f])
+
+    
+'''INPUT
+Rolls = 10
+OUTPUT
+Rolls: 10
+1 4 5 6 2 5 1 3 6 1
+1 -> 3
+2 -> 1
+3 -> 1
+4 -> 1'''
+5 -> 2
+6 -> 2
